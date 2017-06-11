@@ -31,14 +31,6 @@ class ga{
 		double mutation_rate;
 		double crossover_rate;
 
-		//typedef struct parent_struct{ //群體架構
-		//	//int genes[genetic_len];
-		//	int* genes;
-		//	int fitness;
-		//}parent;
-
-		//parent population[population_cnt];
-		//parent pool[population_cnt];
 		parent* population;
 		parent* pool;
 		
@@ -80,9 +72,16 @@ void ga::run(){
 	init();
 	
 	for (int i=0; i<num_run; i++){
+		//2. reproduction to crossover pool
 		reproduction();
+
+		//3. crossover to new population
 		crossover();
+
+		//4. some of new population may mutate
 		mutation();
+
+		//5. print the population result after going through 2~4
 		result();
 	}
 
@@ -130,11 +129,6 @@ void ga::reproduction(){
 	for(int i=1; i<population_cnt; i++){
 		interval[i] = interval[i-1] + (population[i].fitness/total_fitness);
 	}
-/*
-	for (int i=0; i<population_cnt; i++){
-		cout << "interval: " << interval[i] << endl;
-	}
-	*/
 	
 	// 隨機抽population_cnt個複製到交配池
 	for (int i=0; i<population_cnt; i++){
@@ -163,21 +157,25 @@ void ga::reproduction(){
 
 void ga::mutation(){
 	int pos; //要突變的位置
-	double rate = (double)rand()/RAND_MAX;
-	if(rate > mutation_rate)
-		return;
-
-	//要突變的區塊
+	double rate;
+	
+	cout << "in mutation block" << endl;
 	for(int i=0; i<population_cnt; i++){
-		pos=rand()%genetic_len;
-		population[i].genes[pos]=!(population[i].genes[pos]);
-		cal_fitness(&population[i]);
+		rate=(double)rand()/RAND_MAX;
+		
+		//要突變的情況
+		if(rate<=mutation_rate){
+			pos=rand()%genetic_len;
+			population[i].genes[pos]=!(population[i].genes[pos]);
+			cal_fitness(&population[i]);
+			cout << "mutation population: " << i << ", pos: " << pos << endl;
+		}
 	}
 }
 
 // 3. 從交配池選擇交配對象 到新一代
 void ga::crossover(){
-	double rate = (double)rand()/RAND_MAX;
+	double rate; 
 	int flag[population_cnt];
 	for (int i=0; i<population_cnt; i++)
 		flag[i]=0;
@@ -185,6 +183,7 @@ void ga::crossover(){
 	int cnt=0;
 
 	while(cnt<population_cnt){
+		rate = (double)rand()/RAND_MAX;
 		int p1, p2; 
 		int pos; //交配位置
 
@@ -192,14 +191,14 @@ void ga::crossover(){
 			p1=rand()%population_cnt;
 			p2=rand()%population_cnt;
 		}while( (p1==p2) || (flag[p1]!=0) || (flag[p2]!=0) );
-		cout << "in cross, p1: " << p1 << " p2: " << p2 << endl;
+		//cout << "in cross, p1: " << p1 << " p2: " << p2 << endl;
 		flag[p1]=flag[p2]=1;
 
 		//不交配情況
 		if(rate > crossover_rate){
 			memcpy(&population[cnt], &pool[p1], sizeof(parent));	
 			memcpy(&population[cnt+1], &pool[p2], sizeof(parent));	
-			cout << "no crossover" << endl;
+			//cout << "no crossover" << endl;
 		}
 		else{
 			//找交配位置，並進行交配
@@ -207,8 +206,8 @@ void ga::crossover(){
 				pos=rand()%genetic_len;
 			}while(pos==genetic_len-1);
 			
-
-			cout << "before cross" << endl;
+			/* if you want to check the executing pross, you can take off the coments in this block
+			cout << "need crossover, before cross" << endl;
 			for (int i=0; i<genetic_len; i++){
 				cout << pool[p1].genes[i] << " ";
 			}
@@ -217,16 +216,26 @@ void ga::crossover(){
 				cout << pool[p2].genes[i] << " ";
 			}
 			cout << endl;
-		
-			cout << "cross over" << endl;
+			
+			cout << "cross over" << ", pos: " << pos << endl;
+			*/
+
+			parent* tmp_pool=new parent[2];
+			tmp_pool[0].genes=new int[genetic_len];
+			tmp_pool[1].genes=new int[genetic_len];
+
 			for (int i=0; i<=pos; i++){
-				population[cnt].genes[i]=pool[p1].genes[i];
-				population[cnt+1].genes[i]=pool[p2].genes[i];
+				tmp_pool[0].genes[i]=pool[p1].genes[i];
+				tmp_pool[1].genes[i]=pool[p2].genes[i];
 			}
 			for (int i=pos+1; i<genetic_len; i++){
-				population[cnt].genes[i]=pool[p2].genes[i];
-				population[cnt+1].genes[i]=pool[p1].genes[i];
+				tmp_pool[0].genes[i]=pool[p2].genes[i];
+				tmp_pool[1].genes[i]=pool[p1].genes[i];
 			}
+			memcpy((void*)&population[cnt], (void*)&tmp_pool[0], sizeof(parent));
+			memcpy((void*)&population[cnt+1], (void*)&tmp_pool[1], sizeof(parent));
+
+			/* the coment in this block is printing the population result after crossover
 			for (int i=0; i<genetic_len; i++){
 				cout << population[cnt].genes[i] << " ";
 			}
@@ -234,8 +243,11 @@ void ga::crossover(){
 			for (int i=0; i<genetic_len; i++){
 				cout << population[cnt+1].genes[i] << " ";
 			}
+			*/
 		}
 		cnt+=2;
 		cout << "cnt " << cnt << endl;
 	}
+	cout << "end crossover result" << endl;
+	result();
 }
